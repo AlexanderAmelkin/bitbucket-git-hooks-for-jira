@@ -11,6 +11,7 @@ These scripts are to be used with [External Hooks][1] plugin for
 * **validate-issue.js** <br>
   a node.js pre-commit hook script to validate a commit log against JIRA.<br>
   It checks commit log format, JIRA issue assignee, and JIRA issue status.<br>
+  Requires 'jsmin' module to be installed.
 * **validate-issue.conf** <br>
   a configuration template file for the validate-issue.js script.<br>
   The file format is JSON (with comments) and the contents are self-documented.<br>
