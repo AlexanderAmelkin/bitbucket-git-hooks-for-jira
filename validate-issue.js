@@ -1,11 +1,19 @@
-// Configuration part
+#!/usr/bin/env nodejs
+
+/*
+ * This script is cross-platform and should work fine both on Linux and Windows.
+ */
+
+// Configuration part (defaults)
 var summary_line_width = 50
 var max_line_width = 72
-var jira_url = "http://fst-jira.prosoft.ri:8080/"
-var bb_username = "amelkin"
-var bb_password = "isho5Phix"
 
 // ===================== CODE STARTS HERE, DO NOT CHANGE BELOW THIS LINE =======================
+
+String.prototype.chomp = function () {
+	return this.replace(/(\n|\r)+$/, '');
+}
+
 var readline = require('readline')
 var http = require('http')
 var rl = readline.createInterface({
@@ -13,6 +21,48 @@ var rl = readline.createInterface({
 		output: process.stdout,
 		terminal: false
 	})
+var fs = require('fs'),
+    path = require('path'),
+    filePath = path.join(__dirname, 'validate-issue.conf')
+var config
+var jsmin = require('jsmin').jsmin
+
+try {
+	config = JSON.parse(jsmin(fs.readFileSync(filePath).toString('utf8').chomp()))
+}
+catch(e) {
+	console.log("Failed to read config: " + e.message)
+}
+
+if (!config) {
+	console.log("Config not available")
+	process.exit(1)
+}
+else if (!config.user) {
+	console.log("JIRA User name is not defined in config")
+	process.exit(1)
+}
+else if (!config.pass) {
+	console.log("JIRA User password is not defined in config")
+	process.exit(1)
+}
+else if (!config.server) {
+	console.log("JIRA Server hostname is not defined in config")
+	process.exit(1)
+}
+else if (!config.port) {
+	console.log("JIRA Server port is not defined in config")
+	process.exit(1)
+}
+else if (!config.path) {
+	console.log("JIRA Server base path is not defined in config")
+	process.exit(1)
+}
+
+var jira_host = config.server
+var jira_port = config.port
+var jira_path = config.path
+var auth = config.user + ":" + config.pass;
 
 var lines = 0
 var problems = [] // List of problems found (plain text strings)
@@ -71,8 +121,7 @@ function process_line(line)
 	}
 }
 
-function report_and_exit() {
-	console.log("Checked issue "+issue_key+".")
+function report_and_exit(jira_problems) {
 	Object.keys(flags).forEach(function(flag) {
 		if (flags[flag].value) {
 			problems.push(flags[flag].text)
@@ -82,7 +131,7 @@ function report_and_exit() {
 		console.log("ERROR: "+problem)
 	})
 
-	if (problems.length) {
+	if (problems.length && !jira_problems) {
 		console.log(
 		            "*************************************************************\n" +
 		            "\n" +
@@ -108,6 +157,12 @@ function report_and_exit() {
 		            "-----------------------------------------------------------------------"
 		           )
 	}
+	else if (problems.length) {
+		console.log("Commit validation FAILED")
+	}
+	else {
+		console.log("Commit has been validated OK")
+	}
 
 	process.exit(problems.length)
 }
@@ -115,64 +170,81 @@ function report_and_exit() {
 function check_issue()
 {
 	if (problems.length) {
-		console.log("Some problems")
-		report_and_exit()
+		// Do not try to contact JIRA if there are problems with
+		// the commit log format
+		report_and_exit(false)
 	}
 
-	console.log("Requesting "  + jira_url + "/rest/api/2/issue/" + issue_key);
-	var r = http.get(jira_url + "/rest/api/2/issue/" + issue_key, function(res) {
+	console.log("Commit log format is OK");
+	console.log("Validating commit against JIRA issue " + issue_key + "...");
+
+	var options = {
+		protocol : "http:",
+		hostname : jira_host,
+		port : jira_port,
+		method : "GET",
+		auth : auth,
+		path : jira_path + "rest/api/2/issue/" + issue_key,
+		json : true
+	}
+
+//	console.log("Requesting "  + jira_url + "/rest/api/2/issue/" + issue_key);
+	var req = http.request(options, function(res) {
 		const statusCode = res.statusCode
 		const contentType = res.headers['content-type']
 
-		console.log("X");
-
-		if (statusCode == 404) {
-			console.log("404")
-			problems.push("Issue " + issue_key + " doesn't exist")
-			res.resume()
-			report_and_exit()
-			return
-		}
-		else if (statusCode !== 200) {
-			console.log("!200")
+		if (statusCode != 200) {
 			problems.push("JIRA Request failed with code " + statusCode)
 			res.resume()
-			report_and_exit()
-			return
 		} else if (!/^application\/json/.test(contentType)) {
-			console.log("!JSON")
 			problems.push("JIRA returned invalid response of type " + contentType)
 			res.resume()
-			report_and_exit()
-			return
 		}
 
 		res.setEncoding('utf8')
-		let rawData = ''
-		res.on('data', (chunk) => { rawData += chunk; console.log("Chunk") })
-		res.on('end', () => {
-			console.log("end")
+		var rawData = ''
+
+		res.on('data', function(chunk) {
+			rawData += chunk
+		})
+
+		res.on('end', function() {
 			try {
-				let parsedData = JSON.parse(rawData)
-				console.log(parsedData)
+				var parsedData = JSON.parse(rawData)
+				if (parsedData.errorMessages) {
+					parsedData.errorMessages.forEach(function(msg) {
+						problems.push(msg)
+					})
+					report_and_exit(true)
+				}
+
 				if (parsedData.fields.assignee) {
 					var assignee = parsedData.fields.assignee.emailAddress
 					if (assignee != args[0])
 					problems.push("Issue " + issue_key + " is not assigned to " + args[0])
 				}
-				if (!parsedData.status.match(/^In Progress/))
+				if (!parsedData.fields.status.name.match(/^In Progress/))
 					problems.push("Issue " + issue_key + " is not 'In Progress', can't commit")
 			} catch (e) {
 				problems.push("JIRA Response Parse error: " + e.message);
 			}
+			report_and_exit(true)
 		})
-	})
-	r.on('error', (e) => {
-		problems.push("JIRA Request failed: " + e.message)
+		res.on('error', function(e) {
+		       problems.push("Failed to query JIRA: " + e.message);
+		       report_and_exit(true);
+		})
+
 	})
 
-	report_and_exit()
-}
+	req.on('error', function(e) {
+		problems.push("Failed to query JIRA: " + e.message);
+		report_and_exit(true);
+	})
 
+	req.end()
+};
+
+console.log("Validating commit log...");
 rl.on('line', process_line)
 rl.on('close', check_issue)
