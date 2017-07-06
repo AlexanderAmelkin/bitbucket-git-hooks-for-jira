@@ -68,6 +68,10 @@ var lines = 0
 var problems = [] // List of problems found (plain text strings)
 var args = process.argv.slice(2)
 var issue_key = ""
+// Take user e-mail from command line.
+// If not provided, then fallback to what Bitbucket provides in the environment
+// Otherwise set to "unknown"
+var curruser = args[0] || process.env.STASH_USER_EMAIL || "unknown"
 
 // Descriptions for errors that may occur in multiple lines
 // but should be displayed just once
@@ -220,7 +224,7 @@ function check_issue()
 
 				if (parsedData.fields.assignee) {
 					var assignee = parsedData.fields.assignee.emailAddress
-					if (assignee != args[0])
+					if (assignee != curruser)
 					problems.push("Issue " + issue_key + " is not assigned to " + args[0])
 				}
 				if (!parsedData.fields.status.name.match(/^In Progress/))
