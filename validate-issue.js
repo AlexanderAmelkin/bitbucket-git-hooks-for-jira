@@ -1,4 +1,4 @@
-#!/usr/bin/env nodejs
+#!/usr/bin/env node
 
 /*
  * This script is cross-platform and should work fine both on Linux and Windows.
