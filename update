@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+WHEREAMI=`dirname $(readlink -fn ${BASH_SOURCE[0]})`
+REF=$1
+FROM=$2
+TO=$3
+
+# Find out committer's email
+EMAIL=`git log -1 --pretty=format:%ce $TO`
+echo Validating commit $TO by $EMAIL...
+git log -1 --pretty=format:%B $to | $WHEREAMI/validate-issue.js $EMAIL
