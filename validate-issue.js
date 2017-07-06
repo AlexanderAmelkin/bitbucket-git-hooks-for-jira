@@ -86,9 +86,13 @@ function process_line(line)
 	lines++
 
 	if (1 == lines) {
+		var summary
 		fields = line.match(/^([A-Z]+-[0-9]+):( ?(.+)\s*)?$/)
-		issue_key = fields[1] || ""
-		var summary = fields[3] || ""
+
+		if (fields) {
+			issue_key = fields[1] || ""
+			summary = fields[3] || ""
+		}
 
 		if (!issue_key) {
 			problems.push("First line doesn't contain an issue key")
