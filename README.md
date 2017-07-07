@@ -30,15 +30,20 @@ This file must reside in the same directory with the validate-issue.js script.
 
 # Installing for a single repository
 
-If you're running Windows, then your actual hooks for each repository
-are located in a place like `C:\Atlassian\ApplicationData\Bitbucket\shared\data\repositories\<your_repo_number>\hooks`, provided that you have installed Bitbucket Server into `C:\Atlassian`.
+The scripts must be installed in the repository's directory inside Bitbucket Server:
 
-Put all the above files right there and don't forget to edit the `validate-issue.conf` file.
+  1. Go to Bitbucket home, e.g. on Windows that may be
+     `C:\Atlassian\ApplicationData\Bitbucket`
+  2. Go to `shared/data/repositories` and identify which of the numbered directories
+     there contain your repository. You can use `git log` inside those directories
+     to do that.
+  3. Go to the hooks dir of your repository's directory, e.g. `13/hooks`
+  4. Put the files of this project listed above into that directory
+  5. Run `npm install jsmin` to install the `jsmin` module required for validate-issue.js
+  6. Edit validate-issue.conf to reflect your network and account configuration
 
 # Installing as a template
 
 In order for these hooks to be installed automatically for each new repository,
-put those files in the git's `templates` directory, which is located inside Bitbucket's
-`shared/config` directory like this:
-
-`C:\Atlassian\ApplicationData\Bitbucket\shared\config\git\templates\hooks`
+take the same steps as for single repository installation, but put instead of steps 2 and 3,
+go directly to the hook templates directory `shared/config/git/templates/hooks`.
