@@ -8,4 +8,4 @@ TO=$3
 # Find out committer's email
 EMAIL=`git log -1 --pretty=format:%ce $TO`
 echo Validating commit $TO by $EMAIL...
-git log -1 --pretty=format:%B $to | $WHEREAMI/validate-issue.js $EMAIL
+git log -1 --pretty=format:%B $TO | $WHEREAMI/validate-issue.js $EMAIL
