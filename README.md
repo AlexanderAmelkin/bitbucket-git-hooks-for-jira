@@ -28,6 +28,19 @@ A configuration template file for the validate-issue.js script.<br>
 The file format is JSON (with comments) and the contents are self-documented.<br>
 This file must reside in the same directory with the validate-issue.js script.
 
+# System prerequisites
+
+This project assumes that you have the following components installed on your server:
+
+  1. Atlassian Bitbucket Server version 5.0.1 or newer (although should work for older versions as well)
+  2. node.js framework with `node` executable.
+     On Linux that requires installation of `nodejs-legacy` package.
+     On Windows it is sufficient to install the generic node.js package from http://nodejs.org
+  3. Atlassian JIRA (may reside on another host, but should be accessible via network)
+
+It is also recommended to have a special service account enabled in JIRA. The account
+should have a read-only access to all projects. Use that account in validate-issue.conf.
+
 # Installing for a single repository
 
 The scripts must be installed in the repository's directory inside Bitbucket Server:
